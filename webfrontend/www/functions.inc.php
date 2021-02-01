@@ -955,6 +955,7 @@ function form_channel_selection(& $channels, & $probesinfo)
 
 function probes_info_query()
 {
+    global $DBH;
   // Query
     $query = sprintf(
    "SELECT *
