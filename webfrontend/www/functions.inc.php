@@ -124,15 +124,15 @@ function db_connect()
     $dbuser = config_read_value($key, 'dbuser');
     $dbpass = config_read_value($key, 'dbpass');
 
-    $DBH = mysql_connect($dbhost, $dbuser, $dbpass);
+    $DBH = mysqli_connect($dbhost, $dbuser, $dbpass);
     if (!$DBH) {
-	die('Could not connect: ' . mysql_error());
+	die('Could not connect: ' . mysqli_error($DBH));
     }
     //echo 'Connected successfully<br>';
 
-    $db_selected = mysql_select_db($dbname, $DBH);
+    $db_selected = mysqli_select_db($dbname, $DBH);
     if (!$db_selected) {
-	die ("Unable to use dbname:$dbname err: " . mysql_error());
+	die ("Unable to use dbname:$dbname err: " . mysqli_error($DBH));
     }
     return $DBH;
 }
@@ -140,9 +140,9 @@ function db_connect()
 function db_disconnect($link=NULL)
 {
     if (isset($link)) {
-	mysql_close($link);
+	mysqli_close($link);
     } else {
-	mysql_close();
+	mysqli_close();
     }
 }
 
@@ -180,14 +180,15 @@ function cleanup_input_request()
 
 function helper_between_query($fromT=NULL, $toT=NULL, $interval=NULL, $col_name="record_time")
 {
+    global $DBH;
     $statement = "";
     $valid = false;
     $between = " AND $col_name BETWEEN ";
     if (isset($fromT)) {
-	$between .= "'" . mysql_real_escape_string($fromT) . "' AND ";
+	$between .= "'" . mysqli_real_escape_string($DBH, $fromT) . "' AND ";
 
 	if (isset($toT)) {
-	    $to = sprintf(" '%s' ", mysql_real_escape_string($toT));
+	    $to = sprintf(" '%s' ", mysqli_real_escape_string($DBH, $toT));
 	    $between .= $to;
 	    $valid    = true;
 	}
@@ -229,6 +230,7 @@ function probe_data_query_ts($probeid, $bucketsz=86400,
 function probe_data_query($probeid, $bucketsz=86400,
                           $fromT=NULL, $toT=NULL, $interval=NULL)
 {
+    global $DBH;
   // Query
   $sec = $bucketsz;
   #$sec = 4 * 60 * 60;
@@ -246,7 +248,7 @@ function probe_data_query($probeid, $bucketsz=86400,
     FROM   log_event, probes
     WHERE probes.id = probe_id
       AND probes.id = '%s' ",
-   mysql_real_escape_string($probeid));
+   mysqli_real_escape_string($DBH,$probeid));
 
   $query2 .= query_str_remove_channels();
 
@@ -254,9 +256,9 @@ function probe_data_query($probeid, $bucketsz=86400,
   $query2 .= " GROUP BY bucket";
   #print_r($query2);
 
-  $db_result = mysql_query($query2);
+  $db_result = mysqli_query($DBH, $query2);
   if (!$db_result) {
-    $message  = 'Invalid query: ' . mysql_error() . "\n<br>";
+    $message  = 'Invalid query: ' . mysqli_error($DBH) . "\n<br>";
     $message .= 'Whole query: ' . $query2;
     die($message);
   }
@@ -264,7 +266,7 @@ function probe_data_query($probeid, $bucketsz=86400,
   #echo $query2 . "<br>";
 
   $result = array();
-  while ($row = mysql_fetch_assoc($db_result)) {
+  while ($row = mysqli_fetch_assoc($db_result)) {
       #$id = $row['datoen'];
       #$result[$id] = $row;
       array_push($result, $row);
@@ -337,7 +339,7 @@ function multicast_probe_data_query($probeid,
     WHERE probes.id = probe_id
       AND delta_discon > 0
       AND probes.id = '%s' ",
-   mysql_real_escape_string($probeid));
+   mysqli_real_escape_string($DBH,$probeid));
 
     $query .= helper_between_query($fromT, $toT, $interval, "record_time");
 
@@ -345,15 +347,15 @@ function multicast_probe_data_query($probeid,
     $query .= " ORDER BY drops DESC";
     //print_r($query);
 
-    $db_result = mysql_query($query);
+    $db_result = mysqli_query($DBH, $query);
     if (!$db_result) {
-        $message  = 'Invalid query: ' . mysql_error() . "\n<br>";
+        $message  = 'Invalid query: ' . mysqli_error($DBH) . "\n<br>";
         $message .= 'Whole query: ' . $query;
         die($message);
     }
 
     $result = array();
-    while ($row = mysql_fetch_assoc($db_result)) {
+    while ($row = mysqli_fetch_assoc($db_result)) {
         #$id = $row['datoen'];
         #$result[$id] = $row;
         array_push($result, $row);
@@ -396,12 +398,12 @@ function one_channel_data_query($channel, $probeid=NULL, $bucketsz=3600,
            TIMESTAMPDIFF(SECOND, min(record_time), max(record_time)) as period
     FROM   log_event
     WHERE  multicast_dst = '%s' ",
-   mysql_real_escape_string($channel));
+   mysqli_real_escape_string($DBH,$channel));
 
     // Limit to a probeid if given as argument
     if (is_numeric($probeid)) {
         $query .= sprintf(" AND probe_id = '%s' ",
-                          mysql_real_escape_string($probeid));
+                          mysqli_real_escape_string($DBH,$probeid));
     }
 
     $query .= helper_between_query($fromT, $toT, $interval, "record_time");
@@ -410,15 +412,15 @@ function one_channel_data_query($channel, $probeid=NULL, $bucketsz=3600,
     $query .= " ORDER BY probe_id, timestamp";
     //print_r($query);
 
-    $db_result = mysql_query($query);
+    $db_result = mysqli_query($DBH, $query);
     if (!$db_result) {
-        $message  = 'Invalid query: ' . mysql_error() . "\n<br>";
+        $message  = 'Invalid query: ' . mysqli_error($DBH) . "\n<br>";
         $message .= 'Whole query: ' . $query;
         die($message);
     }
 
     $result = array();
-    while ($row = mysql_fetch_assoc($db_result)) {
+    while ($row = mysqli_fetch_assoc($db_result)) {
         #$id = $row['datoen'];
         #$result[$id] = $row;
         array_push($result, $row);
@@ -466,7 +468,7 @@ function one_channel_info_query($channel, $fromT=NULL, $toT=NULL, $interval=NULL
     FROM   log_event, probes
     WHERE  probe_id = probes.id
       AND  multicast_dst = '%s' ",
-   mysql_real_escape_string($channel));
+   mysqli_real_escape_string($DBH,$channel));
 
     $query .= helper_between_query($fromT, $toT, $interval, "record_time");
 
@@ -478,9 +480,9 @@ function one_channel_info_query($channel, $fromT=NULL, $toT=NULL, $interval=NULL
     $query .= " ORDER BY probes.distance, probe_id, timemin";
     //print_r($query);
 
-    $db_result = mysql_query($query);
+    $db_result = mysqli_query($DBH, $query);
     if (!$db_result) {
-        $message  = 'Invalid query: ' . mysql_error() . "\n<br>";
+        $message  = 'Invalid query: ' . mysqli_error($DBH) . "\n<br>";
         $message .= 'Whole query: ' . $query;
         die($message);
     }
@@ -489,7 +491,7 @@ function one_channel_info_query($channel, $fromT=NULL, $toT=NULL, $interval=NULL
 
     $result = array();
     $probekey_prev = "";
-    while ($row = mysql_fetch_assoc($db_result)) {
+    while ($row = mysqli_fetch_assoc($db_result)) {
         $probekey  = "probe_id" . $row['probe_id'];
         /* Save an info record */
         if ("$probekey" != "$probekey_prev" ) {
@@ -684,15 +686,15 @@ function multicast_list_query()
     $query .= " ORDER BY INET_ATON(multicast_dst)";
     //print_r($query);
 
-    $db_result = mysql_query($query);
+    $db_result = mysqli_query($DBH, $query);
     if (!$db_result) {
-        $message  = 'Invalid query: ' . mysql_error() . "\n<br>";
+        $message  = 'Invalid query: ' . mysqli_error($DBH) . "\n<br>";
         $message .= 'Whole query: ' . $query;
         die($message);
     }
 
     $result = array();
-    while ($row = mysql_fetch_assoc($db_result)) {
+    while ($row = mysqli_fetch_assoc($db_result)) {
         #$id = $row['datoen'];
         #$result[$id] = $row;
         array_push($result, $row);
@@ -960,16 +962,16 @@ function probes_info_query()
     WHERE  probes.hidden <> 'yes'
     ORDER BY probes.distance");
 
-    $result = mysql_query($query);
+    $result = mysqli_query($DBH, $query);
     if (!$result) {
-        $message  = 'Invalid query: ' . mysql_error() . "\n<br>";
+        $message  = 'Invalid query: ' . mysqli_error($DBH) . "\n<br>";
         $message .= 'Whole query: ' . $query;
         die($message);
     }
 
     $probes = array();
 
-    while ($row = mysql_fetch_assoc($result)) {
+    while ($row = mysqli_fetch_assoc($result)) {
         $id = $row['id'];
         $probes[$id]=$row;
         // array_push($probes, $row);
@@ -1268,7 +1270,7 @@ function query_str_remove_channels()
     $str_parts=array();
 
     foreach ($remove_channels as $key => $value) {
-        $str = sprintf("'%s'", mysql_real_escape_string($key));
+        $str = sprintf("'%s'", mysqli_real_escape_string($DBH,$key));
         array_push($str_parts, $str);
     }
     $str_elems = implode(', ',$str_parts);

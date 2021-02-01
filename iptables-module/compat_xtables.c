@@ -471,6 +471,8 @@ int xtnu_ip_route_me_harder(struct sk_buff **pskb, unsigned int addr_type)
 	return ip_route_me_harder(pskb);
 #elif LINUX_VERSION_CODE <= KERNEL_VERSION(2, 6, 23)
 	return ip_route_me_harder(pskb, addr_type);
+#elif LINUX_VERSION_CODE >=  KERNEL_VERSION(4, 0, 0)
+    return ip_route_me_harder(NULL, *pskb, addr_type);
 #else
 	return ip_route_me_harder(*pskb, addr_type);
 #endif

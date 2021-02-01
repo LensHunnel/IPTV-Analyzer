@@ -1299,14 +1299,13 @@ static void mpeg2ts_seq_stop(struct seq_file *s, void *v)
 static int mpeg2ts_seq_show_real(struct mpeg2ts_stream *stream,
 				 struct seq_file *s, unsigned int bucket)
 {
-	int res;
 
 	if (!atomic_inc_not_zero(&stream->use)) {
 		/* If "use" is zero, then we about to be free'd */
 		return 0;
 	}
 
-	res = seq_printf(s, "bucket:%d dst:%pI4 src:%pI4 dport:%u sport:%u "
+	seq_printf(s, "bucket:%d dst:%pI4 src:%pI4 dport:%u sport:%u "
 			    "pids:%d skips:%llu discontinuity:%llu "
 			    "payload_bytes:%llu packets:%llu\n",
 			 bucket,
@@ -1323,7 +1322,7 @@ static int mpeg2ts_seq_show_real(struct mpeg2ts_stream *stream,
 
 	atomic_dec(&stream->use);
 
-	return res;
+	return seq_has_overflowed(s);
 }
 
 static int mpeg2ts_seq_show(struct seq_file *s, void *v)
