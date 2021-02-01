@@ -130,7 +130,7 @@ function db_connect()
     }
     //echo 'Connected successfully<br>';
 
-    $db_selected = mysqli_select_db($dbname, $DBH);
+    $db_selected = mysqli_select_db($DBH, $dbname);
     if (!$db_selected) {
 	die ("Unable to use dbname:$dbname err: " . mysqli_error($DBH));
     }
