@@ -329,6 +329,7 @@ function multicast_probe_data_query_ts($probeid,
 function multicast_probe_data_query($probeid,
                                     $fromT=NULL, $toT=NULL, $interval=NULL)
 {
+    global $DBH;
   // Query
     $query = sprintf(
    "SELECT multicast_dst, count(multicast_dst) as records,
