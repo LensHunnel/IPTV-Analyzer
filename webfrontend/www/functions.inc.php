@@ -683,6 +683,7 @@ function one_channel_info_show_table(& $result, $selectedF=NULL, $selectedT=NULL
 
 function multicast_list_query()
 {
+    global $DBH;
     $query  = "SELECT distinct(multicast_dst) FROM log_event";
     $query .= " ORDER BY INET_ATON(multicast_dst)";
     //print_r($query);
